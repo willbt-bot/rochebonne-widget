@@ -635,27 +635,25 @@
   const debouncedTick = debounce(tick, 250);
 
   // ATTEND que React (Lodgify) ait fini d'hydrater avant de toucher au DOM.
-  // Sinon on déclenche des erreurs d'hydratation #418 / #425.
-  // Heuristique : on attend window.load + un délai de "DOM calme" (pas de
-  // mutations Lodgify pendant 600ms d'affilée).
+  // Heuristique :
+  //  - on attend window.load + 1 seconde minimum (React a eu le temps d'hydrater)
+  //  - on démarre AU PLUS TARD 4 secondes après load (cap dur, même si le DOM
+  //    continue de muter — la SPA Lodgify peut re-render en permanence)
+  let started = false;
   function startWhenHydrated() {
-    let lastMutation = Date.now();
-    const calmObserver = new MutationObserver(() => { lastMutation = Date.now(); });
-    calmObserver.observe(document.body, { childList: true, subtree: true });
-
-    function check() {
-      const calmFor = Date.now() - lastMutation;
-      if (calmFor >= 600) {
-        calmObserver.disconnect();
-        startObserving();
-      } else {
-        setTimeout(check, 300);
-      }
-    }
-    // Démarre la vérification après window.load + 800ms de grâce minimum
-    const trigger = () => setTimeout(check, 800);
-    if (document.readyState === 'complete') trigger();
-    else window.addEventListener('load', trigger);
+    const trigger = () => {
+      if (started) return;
+      started = true;
+      console.log('[Rochebonne] start (hydratation supposée terminée)');
+      startObserving();
+    };
+    const begin = () => {
+      // démarre dans 1s (minimum) et au plus tard dans 4s
+      setTimeout(trigger, 1000);
+      setTimeout(trigger, 4000);
+    };
+    if (document.readyState === 'complete') begin();
+    else window.addEventListener('load', begin);
   }
 
   function startObserving() {
