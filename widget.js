@@ -315,31 +315,13 @@
   }
 
   /**
-   * Masque le message "Nous avons de la disponibilité..." que Will a ajouté
-   * manuellement dans Lodgify, pour éviter le doublon avec notre panneau.
+   * NE TOUCHE PLUS aux éléments Lodgify (provoquait des erreurs d'hydratation
+   * React #418/#425). À la place, notre panneau est inséré à l'intérieur
+   * du conteneur, et le message manuel reste visible (acceptable car notre
+   * panneau apporte les vraies solutions au-dessus).
    */
-  function hideExistingEmptyMessage() {
-    if (!cfg.lodgify.hideExistingEmptyMessage) return;
-    const phrase = 'nous avons de la disponibilité';
-    const all = document.querySelectorAll('div, p, section');
-    for (const el of all) {
-      const t = (el.innerText || '').toLowerCase();
-      if (t.startsWith(phrase) || (t.includes(phrase) && t.length < 400)) {
-        // Trouve le plus petit conteneur qui contient ce texte
-        if (el.children.length < 5 && !el.querySelector('#rb-alt-panel')) {
-          el.style.display = 'none';
-          el.dataset.rbHidden = '1';
-        }
-      }
-    }
-  }
-
-  function restoreExistingEmptyMessage() {
-    document.querySelectorAll('[data-rb-hidden="1"]').forEach((el) => {
-      el.style.display = '';
-      delete el.dataset.rbHidden;
-    });
-  }
+  function hideExistingEmptyMessage() { /* no-op — safe by design */ }
+  function restoreExistingEmptyMessage() { /* no-op */ }
 
   function extractQueryFromUrl() {
     const p = new URLSearchParams(location.search);
@@ -566,9 +548,6 @@
     const container = findResultsContainer();
     if (!container) return;
 
-    // Masque le message manuel Lodgify pour éviter le doublon
-    hideExistingEmptyMessage();
-
     const existing = document.getElementById('rb-alt-panel');
     if (existing) existing.remove();
 
@@ -596,7 +575,10 @@
       </div>
     `;
 
-    container.parentNode.insertBefore(panel, container);
+    // Insertion DANS le conteneur (premier enfant) plutôt qu'avant.
+    // Ainsi on ne modifie pas la liste des enfants du parent que React
+    // tient à jour — pas d'erreur d'hydratation.
+    container.insertBefore(panel, container.firstChild);
 
     // tracking
     panel.querySelectorAll('[data-track]').forEach((el) => {
@@ -652,27 +634,49 @@
   const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   const debouncedTick = debounce(tick, 250);
 
-  function start() {
+  // ATTEND que React (Lodgify) ait fini d'hydrater avant de toucher au DOM.
+  // Sinon on déclenche des erreurs d'hydratation #418 / #425.
+  // Heuristique : on attend window.load + un délai de "DOM calme" (pas de
+  // mutations Lodgify pendant 600ms d'affilée).
+  function startWhenHydrated() {
+    let lastMutation = Date.now();
+    const calmObserver = new MutationObserver(() => { lastMutation = Date.now(); });
+    calmObserver.observe(document.body, { childList: true, subtree: true });
+
+    function check() {
+      const calmFor = Date.now() - lastMutation;
+      if (calmFor >= 600) {
+        calmObserver.disconnect();
+        startObserving();
+      } else {
+        setTimeout(check, 300);
+      }
+    }
+    // Démarre la vérification après window.load + 800ms de grâce minimum
+    const trigger = () => setTimeout(check, 800);
+    if (document.readyState === 'complete') trigger();
+    else window.addEventListener('load', trigger);
+  }
+
+  function startObserving() {
     const obs = new MutationObserver(debouncedTick);
-    obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+    obs.observe(document.body, { childList: true, subtree: true });
     debouncedTick();
 
-    // mode proactif : on intercepte le submit du formulaire pour réagir avant
-    // que Lodgify ait répondu. On ne block PAS la soumission native — on laisse
-    // Lodgify faire son taf, et on prépare un panneau si on prédit zéro.
+    // mode proactif : on intercepte le submit du formulaire pour réagir
+    // après que Lodgify ait mis à jour le DOM.
     document.addEventListener('submit', (e) => {
       const form = e.target.closest?.(cfg.lodgify.searchForm);
       if (!form) return;
-      // léger délai pour laisser Lodgify mettre à jour l'URL / le DOM
-      setTimeout(debouncedTick, 800);
-      setTimeout(debouncedTick, 2000);
+      setTimeout(debouncedTick, 1200);
+      setTimeout(debouncedTick, 2500);
     }, true);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start);
+    document.addEventListener('DOMContentLoaded', startWhenHydrated);
   } else {
-    start();
+    startWhenHydrated();
   }
 
   // ==================================================================
