@@ -1,0 +1,260 @@
+/**
+ * ROCHEBONNE — Widget "séjours alternatifs"
+ * --------------------------------------------------------------
+ * Styles sobres, château, premium. Préfixe rb-alt__ pour ne jamais
+ * collisionner avec les classes Lodgify.
+ *
+ * Palette par défaut :
+ *   ocre château  #c9a35f
+ *   crème         #f8f5f0
+ *   texte sombre  #1a1a1a
+ * Modifie les variables CSS ci-dessous pour matcher la charte du site.
+ */
+#rb-alt-panel {
+  --rb-accent: #c9a35f;
+  --rb-accent-dark: #a8853d;
+  --rb-bg: #f8f5f0;
+  --rb-card-bg: #ffffff;
+  --rb-border: #e6dccb;
+  --rb-text: #1a1a1a;
+  --rb-text-soft: #5a5a5a;
+  --rb-text-muted: #7a7a7a;
+  --rb-radius: 12px;
+  --rb-shadow: 0 4px 24px rgba(120, 90, 40, 0.06);
+  --rb-shadow-hover: 0 8px 32px rgba(120, 90, 40, 0.12);
+
+  margin: 24px 0;
+  font-family: inherit;
+  color: var(--rb-text);
+}
+
+.rb-alt {
+  background: linear-gradient(135deg, var(--rb-bg) 0%, #ffffff 100%);
+  border: 1px solid var(--rb-border);
+  border-radius: var(--rb-radius);
+  padding: 32px;
+  box-shadow: var(--rb-shadow);
+}
+
+.rb-alt__head {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.rb-alt__title {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--rb-text);
+  letter-spacing: -0.01em;
+}
+
+.rb-alt__subtitle {
+  margin: 0 auto;
+  max-width: 640px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--rb-text-soft);
+}
+
+.rb-alt__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.rb-alt__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: var(--rb-card-bg);
+  border: 1px solid var(--rb-border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.rb-alt__card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--rb-shadow-hover);
+  border-color: var(--rb-accent);
+}
+
+.rb-alt__card--combo {
+  background: linear-gradient(135deg, #fdf9f0 0%, #ffffff 100%);
+  border-color: #d9c79a;
+}
+
+.rb-alt__combo-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-alt__combo-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--rb-border);
+  font-size: 14px;
+}
+
+.rb-alt__combo-list li:last-child {
+  border-bottom: none;
+}
+
+.rb-alt__combo-name {
+  color: var(--rb-text);
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rb-alt__combo-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--rb-text-muted);
+  font-style: italic;
+}
+
+.rb-alt__combo-cap {
+  color: var(--rb-text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+
+.rb-alt__card--partner {
+  /* nuance plus discrète pour le dernier recours */
+  opacity: 0.92;
+}
+
+.rb-alt__card--partner .rb-alt__card-tag {
+  background: rgba(150, 150, 150, 0.12);
+  color: #7a7a7a;
+}
+
+.rb-alt__card-tag {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 10px;
+  background: rgba(201, 163, 95, 0.12);
+  color: var(--rb-accent-dark);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border-radius: 4px;
+}
+
+.rb-alt__card-dates {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--rb-text);
+}
+
+.rb-alt__card-dates strong {
+  font-weight: 600;
+}
+
+.rb-alt__card-sep {
+  display: inline-block;
+  margin: 0 6px;
+  color: var(--rb-text-muted);
+}
+
+.rb-alt__card-meta {
+  font-size: 13px;
+  color: var(--rb-text-muted);
+}
+
+.rb-alt__card-cta {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rb-accent);
+}
+
+.rb-alt__card:hover .rb-alt__card-cta {
+  color: var(--rb-accent-dark);
+}
+
+.rb-alt__cta {
+  padding-top: 24px;
+  border-top: 1px solid var(--rb-border);
+  text-align: center;
+}
+
+.rb-alt__cta-text {
+  margin: 0 0 16px;
+  color: var(--rb-text-soft);
+  font-size: 15px;
+}
+
+.rb-alt__cta-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.rb-alt__btn {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 15px;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.rb-alt__btn:active { transform: translateY(1px); }
+
+.rb-alt__btn--primary {
+  background: #25D366;
+  color: #fff;
+}
+.rb-alt__btn--primary:hover {
+  background: #1eb854;
+}
+
+.rb-alt__btn:not(.rb-alt__btn--primary) {
+  background: transparent;
+  border-color: var(--rb-accent);
+  color: var(--rb-accent-dark);
+}
+.rb-alt__btn:not(.rb-alt__btn--primary):hover {
+  background: var(--rb-accent);
+  color: #fff;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 640px) {
+  .rb-alt { padding: 22px 18px; }
+  .rb-alt__title { font-size: 20px; }
+  .rb-alt__subtitle { font-size: 15px; }
+  .rb-alt__grid { grid-template-columns: 1fr; gap: 12px; }
+  .rb-alt__card { padding: 16px; }
+  .rb-alt__btn { display: block; width: 100%; }
+  .rb-alt__cta-buttons { flex-direction: column; }
+}
+
+/* ===== Animation d'apparition ===== */
+@keyframes rbFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#rb-alt-panel .rb-alt {
+  animation: rbFadeUp 0.35s ease both;
+}
