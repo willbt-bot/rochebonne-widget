@@ -634,27 +634,78 @@
       }
       return state;
     },
-    // Imprime le DOM pertinent pour aider à trouver le bon sélecteur
+    // Audit DOM en plusieurs stratégies — pour découvrir le bon sélecteur
+    // sur n'importe quelle page Lodgify (classes hash CSS-in-JS incluses).
     inspectDom() {
-      console.log('=== [Rochebonne] inspect DOM ===');
-      console.log('Sélecteurs essayés:', cfg.lodgify.resultsContainer);
-      const found = findResultsContainer();
-      console.log('Conteneur trouvé:', found);
-      const empty = [...document.querySelectorAll('*')].filter((el) => {
-        const t = (el.innerText || '').toLowerCase();
-        return t && t.length < 300 && el.children.length < 8 &&
-          (t.includes('aucun') || t.includes('no result') || t.includes('no propert') || t.includes('disponib'));
+      console.log('=== [Rochebonne] inspect DOM v2 ===');
+      console.log('URL :', location.href);
+      console.log('Sélecteurs configurés :', cfg.lodgify.resultsContainer);
+      console.log('Conteneur trouvé :', findResultsContainer());
+
+      // STRATÉGIE 1 — parent commun des liens vers les fiches gîtes
+      const slugs = cfg.properties.map((p) => p.url).filter(Boolean);
+      const propertyLinks = [...document.querySelectorAll('a[href]')].filter((a) => {
+        const href = a.getAttribute('href') || '';
+        return slugs.some((s) => href.includes(s.split('?')[0]));
       });
-      console.log(`Candidats "no-results" (${empty.length}):`);
-      empty.slice(0, 5).forEach((el, i) =>
-        console.log(`  ${i}.`, el.tagName, '|class:', el.className, '|id:', el.id, '|text:', el.innerText.slice(0, 80))
+      console.log(`\n[Strat 1] Liens vers gîtes trouvés : ${propertyLinks.length}`);
+      if (propertyLinks.length >= 2) {
+        let common = propertyLinks[0].parentElement;
+        while (common && !propertyLinks.every((l) => common.contains(l))) {
+          common = common.parentElement;
+        }
+        if (common) {
+          console.log('  → Parent commun :', common.tagName, '|class:', common.className, '|id:', common.id);
+          console.log('  → Sélecteur suggéré :', common.id ? `#${common.id}` : (common.className ? `.${common.className.split(' ')[0]}` : common.tagName.toLowerCase()));
+        }
+      } else if (propertyLinks.length === 1) {
+        console.log('  → 1 seul lien trouvé. Parent direct :', propertyLinks[0].parentElement?.tagName, propertyLinks[0].parentElement?.className);
+      }
+
+      // STRATÉGIE 2 — détection par structure (cartes avec prix + image)
+      const cards = [...document.querySelectorAll('article, li, div, a')].filter((el) => {
+        const t = el.innerText || '';
+        if (t.length > 800 || t.length < 20) return false;
+        const r = el.getBoundingClientRect();
+        if (r.width < 150 || r.width > 900 || r.height < 100 || r.height > 800) return false;
+        const hasPrice = /\d+[\s,.]?\d*\s*€/.test(t);
+        const hasImg = !!el.querySelector('img');
+        return hasPrice && hasImg;
+      });
+      console.log(`\n[Strat 2] Cartes plausibles (prix + image) : ${cards.length}`);
+      if (cards.length >= 2) {
+        let cardParent = cards[0].parentElement;
+        while (cardParent && !cards.slice(0, 3).every((c) => cardParent.contains(c))) {
+          cardParent = cardParent.parentElement;
+        }
+        if (cardParent) {
+          console.log('  → Parent commun :', cardParent.tagName, '|class:', cardParent.className, '|id:', cardParent.id);
+        }
+      }
+
+      // STRATÉGIE 3 — texte "no results"
+      const noResults = [...document.querySelectorAll('*')].filter((el) => {
+        const t = (el.innerText || '').toLowerCase();
+        if (!t || t.length > 300 || el.children.length > 8) return false;
+        return ['aucun bien', 'aucune dispon', 'no propert', 'no result', 'pas de dispon', 'no matching'].some((p) => t.includes(p));
+      });
+      console.log(`\n[Strat 3] Textes "no results" trouvés : ${noResults.length}`);
+      noResults.slice(0, 5).forEach((el, i) =>
+        console.log(`  ${i}.`, el.tagName, '|class:', el.className, '|text:', el.innerText.slice(0, 100))
       );
-      const lists = document.querySelectorAll('[class*="result"], [class*="properties"], [class*="list"], [id*="result"]');
-      console.log(`Conteneurs "list/result" potentiels (${lists.length}):`);
-      [...lists].slice(0, 8).forEach((el, i) =>
-        console.log(`  ${i}.`, el.tagName, '|class:', el.className, '|id:', el.id)
-      );
-      return { found, empty: empty.slice(0, 5), lists: [...lists].slice(0, 8) };
+
+      // STRATÉGIE 4 — chaîne de parents du 1er lien gîte (debug visuel)
+      if (propertyLinks[0]) {
+        console.log('\n[Strat 4] Hiérarchie parent depuis le 1er lien gîte :');
+        let cur = propertyLinks[0];
+        for (let i = 0; i < 10 && cur; i++) {
+          console.log(`  niveau ${i} :`, cur.tagName, '|class:', (cur.className || '').toString().slice(0, 100), '|id:', cur.id);
+          cur = cur.parentElement;
+        }
+      }
+
+      console.log('\n→ Envoie-moi le sélecteur du parent commun trouvé en Strat 1 ou Strat 2.');
+      return { propertyLinks: propertyLinks.length, cards: cards.length, noResults: noResults.length };
     },
   };
 })();
