@@ -241,15 +241,18 @@
     // Pour auditer : ouvre une page de résultats vide sur le site,
     // Inspect → trouve le conteneur, copie son sélecteur ici.
     lodgify: {
+      // Sélecteurs essayés dans l'ordre. Si tous échouent, le widget bascule
+      // sur une détection structurelle (parent commun des liens vers les
+      // fiches gîtes du domaine) → self-healing même si Lodgify renomme.
       resultsContainer: [
+        '.css-1w2afhi',                         // conteneur identifié (mai 2026)
+        '.css-1r8vw2f',                         // variante observée
         '[data-testid="search-results"]',
         '.lodgify-search-results',
-        '.search-results',
-        '#search-results',
-        '.lodgify-properties-list',
       ].join(', '),
 
       emptyStateTexts: [
+        'nous avons de la disponibilité',       // ⚠️ message manuel ajouté par Will dans Lodgify
         'no properties available',
         'aucun bien disponible',
         'aucune disponibilité',
@@ -258,6 +261,10 @@
         'pas de disponibilité',
         'no matching properties',
       ],
+
+      // Si true, masque le message manuel Lodgify quand notre panneau s'affiche
+      // (sinon les deux apparaissent en double).
+      hideExistingEmptyMessage: true,
 
       searchForm: 'form[action*="search"], .lodgify-search-form, [data-testid="search-form"]',
 

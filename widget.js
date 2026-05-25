@@ -258,10 +258,48 @@
   // ==================================================================
   // DÉTECTION LODGIFY (DOM + URL)
   // ==================================================================
+  /**
+   * Helpers pour détecter les liens vers les fiches gîtes du domaine.
+   * Self-healing : marche même si Lodgify change ses classes CSS,
+   * tant que les URLs des fiches gîtes restent stables.
+   */
+  function propertySlugs() {
+    return (cfg.properties || [])
+      .map((p) => (p.url || '').split('?')[0])
+      .filter(Boolean);
+  }
+
+  function findPropertyLinks(root) {
+    const slugs = propertySlugs();
+    if (!slugs.length) return [];
+    return [...(root || document).querySelectorAll('a[href]')].filter((a) => {
+      const href = a.getAttribute('href') || '';
+      return slugs.some((s) => href.includes(s));
+    });
+  }
+
   function findResultsContainer() {
+    // 1. Sélecteurs configurés (rapide)
     for (const sel of cfg.lodgify.resultsContainer.split(',').map((s) => s.trim())) {
+      if (!sel) continue;
       const el = document.querySelector(sel);
       if (el) return el;
+    }
+    // 2. Fallback structurel : parent commun des liens vers les fiches gîtes
+    const links = findPropertyLinks(document);
+    if (links.length >= 2) {
+      let common = links[0].parentElement;
+      while (common && !links.every((l) => common.contains(l))) {
+        common = common.parentElement;
+      }
+      if (common) return common;
+    }
+    // 3. Fallback "no results" : conteneur portant un texte d'état vide
+    for (const phrase of cfg.lodgify.emptyStateTexts) {
+      const xpath = `//*[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '${phrase.toLowerCase()}')]`;
+      const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      const node = result.singleNodeValue;
+      if (node && node.children.length < 10) return node.closest('div') || node.parentElement;
     }
     return null;
   }
@@ -269,11 +307,38 @@
   function isEmptyState(container) {
     if (!container) return false;
     const txt = (container.innerText || '').toLowerCase();
-    const matchedText = cfg.lodgify.emptyStateTexts.some((t) => txt.includes(t.toLowerCase()));
-    if (matchedText) return true;
-    // heuristique de secours : conteneur quasi vide
-    const cards = container.querySelectorAll('[class*="property"], [class*="result-card"], .property-card, [data-testid*="property"]');
-    return cards.length === 0 && (container.children?.length ?? 0) < 3;
+    // 1. Match sur les phrases d'état vide (inclut le message manuel de Will)
+    if (cfg.lodgify.emptyStateTexts.some((t) => txt.includes(t.toLowerCase()))) return true;
+    // 2. Absence de liens vers les fiches gîtes dans le conteneur
+    const propLinks = findPropertyLinks(container);
+    return propLinks.length === 0;
+  }
+
+  /**
+   * Masque le message "Nous avons de la disponibilité..." que Will a ajouté
+   * manuellement dans Lodgify, pour éviter le doublon avec notre panneau.
+   */
+  function hideExistingEmptyMessage() {
+    if (!cfg.lodgify.hideExistingEmptyMessage) return;
+    const phrase = 'nous avons de la disponibilité';
+    const all = document.querySelectorAll('div, p, section');
+    for (const el of all) {
+      const t = (el.innerText || '').toLowerCase();
+      if (t.startsWith(phrase) || (t.includes(phrase) && t.length < 400)) {
+        // Trouve le plus petit conteneur qui contient ce texte
+        if (el.children.length < 5 && !el.querySelector('#rb-alt-panel')) {
+          el.style.display = 'none';
+          el.dataset.rbHidden = '1';
+        }
+      }
+    }
+  }
+
+  function restoreExistingEmptyMessage() {
+    document.querySelectorAll('[data-rb-hidden="1"]').forEach((el) => {
+      el.style.display = '';
+      delete el.dataset.rbHidden;
+    });
   }
 
   function extractQueryFromUrl() {
@@ -489,6 +554,9 @@
     const container = findResultsContainer();
     if (!container) return;
 
+    // Masque le message manuel Lodgify pour éviter le doublon
+    hideExistingEmptyMessage();
+
     const existing = document.getElementById('rb-alt-panel');
     if (existing) existing.remove();
 
@@ -555,6 +623,7 @@
     if (!isEmptyState(container)) {
       // si on a un panneau ouvert et que Lodgify a re-render des résultats → on retire
       document.getElementById('rb-alt-panel')?.remove();
+      restoreExistingEmptyMessage();
       lastSignature = null;
       return;
     }
