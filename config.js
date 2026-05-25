@@ -262,8 +262,15 @@
       searchForm: 'form[action*="search"], .lodgify-search-form, [data-testid="search-form"]',
 
       // URL Lodgify de recherche (pour générer les liens "voir la dispo")
-      // Le widget devine les bons query params, mais on peut surcharger ici.
-      searchBaseUrl: '/search',
+      searchBaseUrl: '/fr/nos-gites-de-vacances/',
+
+      // Noms des paramètres URL utilisés par Lodgify (à confirmer après audit)
+      // Lodgify Website Builder utilise `adults` plutôt que `guests`.
+      urlParams: {
+        checkIn:  ['startDate', 'arrival', 'checkIn', 'start'],
+        checkOut: ['endDate',   'departure', 'checkOut', 'end'],
+        guests:   ['adults', 'guests', 'people'],
+      },
     },
 
     // =====================================================

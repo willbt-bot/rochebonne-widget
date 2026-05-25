@@ -278,13 +278,25 @@
 
   function extractQueryFromUrl() {
     const p = new URLSearchParams(location.search);
-    const ci = p.get('checkIn') || p.get('arrival') || p.get('startDate') || p.get('start');
-    const co = p.get('checkOut') || p.get('departure') || p.get('endDate') || p.get('end');
-    const g = parseInt(p.get('guests') || p.get('people') || p.get('adults') || '0', 10);
-    if (!ci || !co || !g) return null;
+    const candidates = cfg.lodgify.urlParams || {
+      checkIn:  ['checkIn', 'arrival', 'startDate', 'start'],
+      checkOut: ['checkOut', 'departure', 'endDate', 'end'],
+      guests:   ['adults', 'guests', 'people'],
+    };
+    const pick = (keys) => {
+      for (const k of keys) { const v = p.get(k); if (v) return v; }
+      return null;
+    };
+    const ci = pick(candidates.checkIn);
+    const co = pick(candidates.checkOut);
+    const adults   = parseInt(pick(candidates.guests) || '0', 10);
+    const children = parseInt(p.get('children') || '0', 10);
+    const infants  = parseInt(p.get('infants')  || '0', 10);
+    const guests = adults + children + infants;        // Lodgify split
+    if (!ci || !co || !guests) return null;
     const dCi = toDate(ci), dCo = toDate(co);
     if (!dCi || !dCo) return null;
-    return { checkIn: dCi, checkOut: dCo, guests: g };
+    return { checkIn: dCi, checkOut: dCo, guests };
   }
 
   function extractQueryFromForm() {
@@ -315,11 +327,18 @@
   // ==================================================================
   function buildBookingUrl(checkIn, checkOut, guests, propertyUrl) {
     try {
-      // Si on a une URL de propriété spécifique, on la prend ; sinon /search
       const base = new URL(propertyUrl || cfg.lodgify.searchBaseUrl, location.origin);
-      base.searchParams.set('checkIn', isoDay(checkIn));
-      base.searchParams.set('checkOut', isoDay(checkOut));
-      base.searchParams.set('guests', guests);
+      // Utilise les noms de params Lodgify (premier de chaque liste comme valeur de sortie)
+      const params = cfg.lodgify.urlParams || {};
+      const inKey  = (params.checkIn  || ['checkIn'])[0];
+      const outKey = (params.checkOut || ['checkOut'])[0];
+      const guestKey = (params.guests || ['adults'])[0];
+      base.searchParams.set(inKey,  isoDay(checkIn));
+      base.searchParams.set(outKey, isoDay(checkOut));
+      base.searchParams.set(guestKey, guests);
+      base.searchParams.set('children', '0');
+      base.searchParams.set('infants',  '0');
+      base.searchParams.set('pets',     '0');
       return base.toString();
     } catch (e) {
       return cfg.lodgify.searchBaseUrl;
@@ -597,8 +616,45 @@
       };
       window.__rbLastQuery = q;
       const state = buildSuggestions(q);
+      const container = findResultsContainer();
+      if (!container) {
+        console.warn('[Rochebonne] ❌ Conteneur de résultats Lodgify introuvable. Sélecteurs essayés :', cfg.lodgify.resultsContainer);
+        console.warn('[Rochebonne] → injection en mode FALLBACK juste après le formulaire de recherche');
+        const form = document.querySelector(cfg.lodgify.searchForm);
+        if (form?.parentElement) {
+          const fakeContainer = document.createElement('div');
+          fakeContainer.id = '__rb_fallback_anchor';
+          form.parentElement.insertBefore(fakeContainer, form.nextSibling);
+        }
+      }
       render(state, q);
+      console.log('[Rochebonne] simulate() ok →', state.reasons, state.suggestions.length, 'suggestions');
+      if (!document.getElementById('rb-alt-panel')) {
+        console.warn('[Rochebonne] ❌ panel non rendu. Inspecte le DOM et envoie-moi le bon sélecteur du conteneur de résultats.');
+      }
       return state;
+    },
+    // Imprime le DOM pertinent pour aider à trouver le bon sélecteur
+    inspectDom() {
+      console.log('=== [Rochebonne] inspect DOM ===');
+      console.log('Sélecteurs essayés:', cfg.lodgify.resultsContainer);
+      const found = findResultsContainer();
+      console.log('Conteneur trouvé:', found);
+      const empty = [...document.querySelectorAll('*')].filter((el) => {
+        const t = (el.innerText || '').toLowerCase();
+        return t && t.length < 300 && el.children.length < 8 &&
+          (t.includes('aucun') || t.includes('no result') || t.includes('no propert') || t.includes('disponib'));
+      });
+      console.log(`Candidats "no-results" (${empty.length}):`);
+      empty.slice(0, 5).forEach((el, i) =>
+        console.log(`  ${i}.`, el.tagName, '|class:', el.className, '|id:', el.id, '|text:', el.innerText.slice(0, 80))
+      );
+      const lists = document.querySelectorAll('[class*="result"], [class*="properties"], [class*="list"], [id*="result"]');
+      console.log(`Conteneurs "list/result" potentiels (${lists.length}):`);
+      [...lists].slice(0, 8).forEach((el, i) =>
+        console.log(`  ${i}.`, el.tagName, '|class:', el.className, '|id:', el.id)
+      );
+      return { found, empty: empty.slice(0, 5), lists: [...lists].slice(0, 8) };
     },
   };
 })();
