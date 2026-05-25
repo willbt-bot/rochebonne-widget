@@ -459,12 +459,24 @@
   // RENDU
   // ==================================================================
   function pickHeadline(reasons, query, rule) {
+    const isGroup = query.guests >= 8;
+
+    // Cas explicite : groupe trop grand pour un seul logement
     if (reasons.includes('NEEDS_COMBINATION')) {
       return {
         title: `Nous avons des solutions pour votre groupe de ${query.guests}`,
-        subtitle: `Plusieurs de nos hébergements sont mitoyens et peuvent être réservés ensemble pour accueillir tout votre groupe dans un cadre unique.`,
+        subtitle: `Plusieurs de nos hébergements sont à quelques mètres l'un de l'autre et peuvent être réservés ensemble.`,
       };
     }
+
+    // Cas groupe 8-15 avec problème de dates : on combine les deux messages
+    if (isGroup && (reasons.includes('WRONG_ARRIVAL_DAY') || reasons.includes('MIN_STAY_NOT_MET'))) {
+      return {
+        title: `Nos solutions pour votre groupe de ${query.guests}`,
+        subtitle: `En ${rule.label.toLowerCase()} les conditions sont strictes, mais nous avons des dates alternatives et des hébergements combinables qui marchent.`,
+      };
+    }
+
     if (reasons.includes('WRONG_ARRIVAL_DAY') && reasons.includes('MIN_STAY_NOT_MET')) {
       return {
         title: 'Vos dates ne correspondent pas aux conditions de séjour',

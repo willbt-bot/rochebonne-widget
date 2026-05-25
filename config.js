@@ -213,16 +213,9 @@
         url: '/fr/grand-gite-14-pers---le-pressoir-la-cave',
         directBookable: true,
       },
-      {
-        propertyIds: [
-          'chateau', 'maison-piscine', 'la-charrue', 'le-pressoir', 'la-cave',
-          'le-chai', 'le-four-a-pain', 'la-mangeoire', 'la-chaumiere', 'le-studio',
-        ],
-        name: 'Domaine de Rochebonne entier',
-        capacity: 68,
-        url: '/fr/le-domaine-de-rochebonne-entier',
-        directBookable: true,
-      },
+      // "Domaine de Rochebonne entier" (ID Lodgify 770551) volontairement exclu
+      // → Will l'a bloqué dans son PMS (dispos fermées sur 2-3 ans). On évite
+      // de le suggérer même si l'algo générait un jour un combo de 10 propriétés.
     ],
 
     // =====================================================
@@ -271,11 +264,13 @@
       // URL Lodgify de recherche (pour générer les liens "voir la dispo")
       searchBaseUrl: '/fr/nos-gites-de-vacances/',
 
-      // Noms des paramètres URL utilisés par Lodgify (à confirmer après audit)
-      // Lodgify Website Builder utilise `adults` plutôt que `guests`.
+      // Noms des paramètres URL utilisés par Lodgify (confirmés par audit live).
+      // Le PREMIER élément est utilisé pour CONSTRUIRE les URLs sortantes
+      // (clics sur les cartes de suggestion). Les autres sont des fallbacks
+      // de lecture (extractQueryFromUrl).
       urlParams: {
-        checkIn:  ['startDate', 'arrival', 'checkIn', 'start'],
-        checkOut: ['endDate',   'departure', 'checkOut', 'end'],
+        checkIn:  ['arrival', 'startDate', 'checkIn', 'start'],
+        checkOut: ['departure', 'endDate', 'checkOut', 'end'],
         guests:   ['adults', 'guests', 'people'],
       },
     },
