@@ -306,12 +306,16 @@
 
   function isEmptyState(container) {
     if (!container) return false;
-    const txt = (container.innerText || '').toLowerCase();
-    // 1. Match sur les phrases d'état vide (inclut le message manuel de Will)
-    if (cfg.lodgify.emptyStateTexts.some((t) => txt.includes(t.toLowerCase()))) return true;
-    // 2. Absence de liens vers les fiches gîtes dans le conteneur
+    // RÈGLE D'OR : la présence d'au moins 1 carte gîte = PAS empty.
+    // (Will a ajouté un message permanent "Nous avons de la disponibilité..."
+    // dans Lodgify qui s'affiche même quand il y a des résultats. On ne peut
+    // donc PAS se fier aux phrases d'état vide en premier.)
     const propLinks = findPropertyLinks(container);
-    return propLinks.length === 0;
+    if (propLinks.length > 0) return false;
+    // Empty state confirmé = absence de cartes gîtes ET présence d'un texte
+    // explicite "no results / aucune disponibilité / nous avons de la dispo..."
+    const txt = (container.innerText || '').toLowerCase();
+    return cfg.lodgify.emptyStateTexts.some((t) => txt.includes(t.toLowerCase()));
   }
 
   /**
